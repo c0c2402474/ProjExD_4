@@ -204,6 +204,7 @@ class Enemy(pg.sprite.Sprite):
     def __init__(self):
         super().__init__()
         self.image = pg.transform.rotozoom(random.choice(__class__.imgs), 0, 0.8)
+        #self.image = pg.transform.laplacian(self.image)
         self.rect = self.image.get_rect()
         self.rect.center = random.randint(0, WIDTH), 0
         self.vx, self.vy = 0, +6
@@ -241,6 +242,43 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class EMP:
+    def __init__(self, enemies:pg.sprite.Group, bombs:pg.sprite.Group, screen:pg.Surface):
+        self.enemies = enemies
+        self.bombs = bombs
+        self.screen = screen
+        self.active = False
+
+    def activate(self):
+        if not self.active:  # すでにアクティブでない場合のみ発動
+            self.active = True
+            self.disable_enemies()
+            self.disable_bombs()
+            self.display_visual_effect()
+
+    def disable_enemies(self):
+        for enemy in self.enemies:
+            enemy.image = pg.transform.laplacian(enemy.image)  # ラプラシアンフィルタを適用
+            enemy.interval = float('inf')  # 無限大に設定
+
+    def disable_bombs(self):
+        for bomb in self.bombs:
+            bomb.speed /= 2  # スピードを半減
+            bomb.state = "inactive"      # 非アクティブに設定
+
+    def laplacian(self, image):
+        # ラプラシアンフィルタを適用する処理
+        return pg.transform.rotozoom(image, 0, 0.9)  # 例として縮小処理を適用
+
+    def display_visual_effect(self):
+        overlay = pg.Surface((WIDTH, HEIGHT))
+        overlay.set_alpha(128)  # 透明度を設定
+        overlay.fill((255, 255, 0))  # 黄色
+        self.screen.blit(overlay, (0, 0))
+        pg.display.flip()
+        pg.time.delay(50)  # 0.05秒待機
+
+
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -253,6 +291,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    emp = EMP(emys, bombs, screen)
 
     tmr = 0
     clock = pg.time.Clock()
@@ -263,6 +302,8 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_e:
+                emp.activate()
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -288,6 +329,8 @@ def main():
             pg.display.update()
             time.sleep(2)
             return
+        
+        #Enemy.image = pg.transform.laplacian(Enemy.image)
 
         bird.update(key_lst, screen)
         beams.update()
