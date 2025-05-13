@@ -277,6 +277,37 @@ class Score:
         screen.blit(self.image, self.rect)
 
 
+class Shield(pg.sprite.Sprite):
+    """
+    防御壁クラス
+    爆弾と衝突、あるいは発動後400フレームで消失
+    こうかとんの向いている方向に生成
+    """
+    def __init__(self, bird: Bird, life: int = 400):
+        super().__init__()
+        self.life = life
+
+        self.width = 20  #シールドの横幅20
+        self.height = bird.rect.height * 2  #シールドの高さ：こうかとんの身長の2倍
+        shield_surface = pg.Surface((self.width, self.height)) 
+        shield_surface.set_colorkey((0, 0, 0))  #黒を透過色に設定
+        pg.draw.rect(shield_surface, (0, 0, 255), (0, 0, self.width, self.height))  #青いシールドを生成
+
+        vx, vy = bird.dire  #こうかとんの向きを取得
+        self.angle = math.degrees(math.atan2(-vy, vx))  #vx,vyから角度を計算
+        self.image = pg.transform.rotate(shield_surface, self.angle)  #self.angleの角度だけシールドを回転
+        self.rect = self.image.get_rect()
+
+        #向いている方向に、こうかとんの中心からこうかとん１体分ずらした位置にシールドを設置
+        self.rect.centerx = bird.rect.centerx + vx * bird.rect.width
+        self.rect.centery = bird.rect.centery + vy * bird.rect.height
+
+    def update(self):
+        self.life -= 1
+        if self.life <= 0:
+            self.kill()
+
+    
 def main():
     pg.display.set_caption("真！こうかとん無双")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -288,7 +319,6 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
-    neobeam = NeoBeam(bird,5)
 
     tmr = 0
     clock = pg.time.Clock()
@@ -296,26 +326,9 @@ def main():
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
             if event.type == pg.QUIT:
-                return 0 
-            
-                #追加機能4
-                #発動条件が満たされたら,state="hyper", hyper_life=500とする.消費条件スコアscore.valueは最終的に100にする
-            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value>100:
-                bird.state="hyper"
-                bird.hyper_life=500
-                score.value=score.value-100
-            
-
-            # if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-            #     beams.add(Beam(bird))
-            if event.type == pg.KEYDOWN and key_lst[pg.K_LSHIFT] and event.key == pg.K_SPACE:
-                beam_lst = neobeam.gen_beam()
-                print(beam_lst)
-                for i in beam_lst:
-                    beams.add(Beam(bird, i))
-                    
-
-
+                return 0
+            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                beams.add(Beam(bird))
         screen.blit(bg_img, [0, 0])
 
 
@@ -354,8 +367,8 @@ def main():
                 return
             score.update(screen)
             pg.display.update()
-            
-            
+            time.sleep(2)
+            return
 
         bird.update(key_lst, screen)
         beams.update()
@@ -367,6 +380,8 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
+        shields.draw(screen)
+        shields.update()
         pg.display.update()
         tmr += 1
         clock.tick(50)
