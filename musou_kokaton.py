@@ -319,6 +319,8 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    neobeam = NeoBeam(bird,5)
+    shields = pg.sprite.Group()
 
     tmr = 0
     clock = pg.time.Clock()
@@ -326,9 +328,33 @@ def main():
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
             if event.type == pg.QUIT:
-                return 0
+                return 0 
+            
+                #追加機能4
+                #発動条件が満たされたら,state="hyper", hyper_life=500とする.消費条件スコアscore.valueは最終的に100にする
+            if event.type == pg.KEYDOWN and event.key == pg.K_RSHIFT and score.value>100:
+                bird.state="hyper"
+                bird.hyper_life=500
+                score.value=score.value-100
+            
+
+            # if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+            #     beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and key_lst[pg.K_LSHIFT] and event.key == pg.K_SPACE:
+                beam_lst = neobeam.gen_beam()
+                # print(beam_lst)
+                for i in beam_lst:
+                    beams.add(Beam(bird, i))
+                    
+
+
+
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_s:  #sキーを押下したとき
+                if score.value >= 50 and len(shields) == 0:  #スコアが50以上かつシールドが場にないとき
+                    shields.add(Shield(bird))
+                    score.value -= 50  #シールドを展開する度にスコア50を消費
         screen.blit(bg_img, [0, 0])
 
 
@@ -367,8 +393,9 @@ def main():
                 return
             score.update(screen)
             pg.display.update()
-            time.sleep(2)
-            return
+        
+        for shield in pg.sprite.groupcollide(shields, bombs, True, True).keys():  #シールドと爆弾の衝突判定
+            exps.add(Explosion(shield, 50))
 
         bird.update(key_lst, screen)
         beams.update()
