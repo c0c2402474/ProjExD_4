@@ -311,6 +311,43 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class EMP:
+    def __init__(self, enemies:pg.sprite.Group, bombs:pg.sprite.Group, screen:pg.Surface):
+        self.enemies = enemies
+        self.bombs = bombs
+        self.screen = screen
+        self.active = False
+
+    def activate(self):
+        if not self.active:  # すでにアクティブでない場合のみ発動
+            self.active = True
+            self.disable_enemies()
+            self.disable_bombs()
+            self.display_visual_effect()
+
+    def disable_enemies(self):
+        for enemy in self.enemies:
+            enemy.image = pg.transform.laplacian(enemy.image)  # ラプラシアンフィルタを適用
+            enemy.interval = float('inf')  # 無限大に設定
+
+    def disable_bombs(self):
+        for bomb in self.bombs:
+            bomb.speed /= 2  # スピードを半減
+            bomb.state = "inactive"      # 非アクティブに設定
+
+    def laplacian(self, image):
+        # ラプラシアンフィルタを適用する処理
+        return pg.transform.rotozoom(image, 0, 0.9)  # 例として縮小処理を適用
+
+    def display_visual_effect(self):
+        overlay = pg.Surface((WIDTH, HEIGHT))
+        overlay.set_alpha(128)  # 透明度を設定
+        overlay.fill((255, 255, 0))  # 黄色
+        self.screen.blit(overlay, (0, 0))
+        pg.display.flip()
+        pg.time.delay(50)  # 0.05秒待機
+
+
 
 class Shield(pg.sprite.Sprite):
     """
@@ -354,6 +391,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    emp = EMP(emys, bombs, screen)
     gravitys = pg.sprite.Group()
     neobeam = NeoBeam(bird,5)
     shields = pg.sprite.Group()
@@ -387,6 +425,8 @@ def main():
 
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN and event.key == pg.K_e:
+                emp.activate()
             if event.type == pg.KEYDOWN and event.key == pg.K_RETURN and score.value >= 200:  # gravity発動条件
                 gravitys.add(Gravity(400))
                 
